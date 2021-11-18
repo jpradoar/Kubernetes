@@ -1,16 +1,6 @@
-# kubernetes
-
-<pre>
-	All test were tested on kubernetes 1.20 (eks)
-</pre>
-
-
-
-#### Kubernetes deployment Best Practices 
+### Kubernetes deployment Best Practices 
 
 Searching in kubernetes website and I selected the most common issues for create a "Best practices Deployment"
-
-
 
 | Description | Status|
 |-   |-       |

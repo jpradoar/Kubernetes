@@ -13,13 +13,14 @@ metadata:
   annotations:
     prometheus.io/scrape: 'true'
     service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "environment=dev,owner=SRE,job=demoapp"
-    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true" # Esto balancea equitativamente entre todos los destinos (pods)
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
     service.beta.kubernetes.io/aws-load-balancer-type: nlb # (AWS NLB)
     service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "3"
     service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "3"
     service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "10"
     service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "10"
     service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "TCP"
+    part_of: "my app"      
   labels:
     app: demoapp
 spec:
@@ -37,12 +38,14 @@ kind: Service
 metadata:
   namespace: demons
   name: internal-service-demoapp
+  annotations:
+    part_of: "my app"    
 spec:
   selector:
     app: demoapp
   ports:
     - protocol: TCP     # Protocolo
-      port: 5678        # Puerto que queres exponer
+      port: 80        # Puerto que queres exponer
       targetPort: 5678  # Puerto del pod/container destino
 
 ---
@@ -51,6 +54,8 @@ kind: Secret
 metadata:
   name: demoapp-secrets
   namespace: demons
+  annotations:
+    part_of: "my app"    
 data:
   username: YWRtaW4K              # echo "admin"|base64
   password: c3VwZXJwYXNzd29yZAo=  # echo "superpassword"|base64
@@ -63,6 +68,10 @@ kind: HorizontalPodAutoscaler
 metadata:
   name: demoapp-hpa
   namespace: demons
+  annotations:
+    imageregistry: "public"
+    version: "v1"
+    part_of: "my app"  
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
@@ -84,8 +93,14 @@ kind: Deployment
 metadata:
   name: demoapp
   namespace: demons
+#----------------------------------  
   labels:
     app: demoapp
+  annotations:
+    imageregistry: "public"
+    version: "v1"
+    part_of: "my app"
+#----------------------------------
 spec:
   replicas: 1
 #-----------------------------------------  
@@ -102,6 +117,10 @@ spec:
     metadata:
       labels:
         app: demoapp
+      annotations:
+        imageregistry: "public"
+        version: "v1"
+        part_of: "my app"        
     spec:
       containers:
       - name: demoapp-pod
