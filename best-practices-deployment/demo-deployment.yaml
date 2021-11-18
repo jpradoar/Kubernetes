@@ -1,0 +1,156 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demons
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: demons
+  name: external-service-demoapp
+  annotations:
+    prometheus.io/scrape: 'true'
+    service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "environment=dev,owner=SRE,job=demoapp"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true" # Esto balancea equitativamente entre todos los destinos (pods)
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb # (AWS NLB)
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "3"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "3"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "10"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "10"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-protocol: "TCP"
+  labels:
+    app: demoapp
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: 5678
+  selector:
+    app: demoapp
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: demons
+  name: internal-service-demoapp
+spec:
+  selector:
+    app: demoapp
+  ports:
+    - protocol: TCP     # Protocolo
+      port: 5678        # Puerto que queres exponer
+      targetPort: 5678  # Puerto del pod/container destino
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: demoapp-secrets
+  namespace: demons
+data:
+  username: YWRtaW4K              # echo "admin"|base64
+  password: c3VwZXJwYXNzd29yZAo=  # echo "superpassword"|base64
+  secure_string: SG9sYSwgc295IHVuYSB2YXJpYWJsZSBlbiBmb3JtYSBkZSBzZWNyZXQK
+
+
+---            
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: demoapp-hpa
+  namespace: demons
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demoapp
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demoapp
+  namespace: demons
+  labels:
+    app: demoapp
+spec:
+  replicas: 1
+#-----------------------------------------  
+  strategy: 
+    type: RollingUpdate    
+    rollingUpdate:      
+       maxSurge: 50%          
+       maxUnavailable: 0  
+#-----------------------------------------        
+  selector:
+    matchLabels:
+      app: demoapp
+  template:
+    metadata:
+      labels:
+        app: demoapp
+    spec:
+      containers:
+      - name: demoapp-pod
+        image: hashicorp/http-echo:0.2.3
+        imagePullPolicy: Always
+        args:
+         - "-text=Hi. Im a pod with Best practices :)"
+#-----------------------------------------
+        env:
+        - name: SECRET_DATA
+          valueFrom:
+            secretKeyRef:
+              name: demoapp-secrets
+              key: secure_string
+#-----------------------------------------              
+        ports:
+         - containerPort: 5678
+#-----------------------------------------         
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5678
+          initialDelaySeconds: 3
+          periodSeconds: 3
+#-----------------------------------------          
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5678
+          initialDelaySeconds: 3
+          periodSeconds: 3
+#-----------------------------------------          
+        resources:
+          limits:
+            cpu: 150m
+            memory: 512Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
+#-----------------------------------------            
+        securityContext: # SUPER IMPORTANT !!!!!!!!!!!!
+          runAsUser: 1000
+          runAsGroup: 1000
+          allowPrivilegeEscalation: false
+          privileged: false
+          readOnlyRootFilesystem: true  
+          runAsNonRoot: true
+          capabilities:
+            drop: ["ALL"]
+#-----------------------------------------            
+      nodeSelector:
+      tolerations:         

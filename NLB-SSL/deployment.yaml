@@ -1,0 +1,75 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: superdupertest
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: superdupertest
+  name: nlb-external-service 
+  annotations:
+    prometheus.io/scrape: 'true'
+    service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "environment=dev,owner=SRE,job=test"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true" # Esto balancea equitativamente entre todos los destinos (pods)
+    service.beta.kubernetes.io/aws-load-balancer-type: nlb # Es el unico que soporta hasta el momento (si no pongo nada, usa el classic)
+    service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "30"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "3"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "10"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "3"
+    # Specifies the bandwidth value (value range: [1,2000] Mbps).
+    #service.kubernetes.io/qcloud-loadbalancer-internet-max-bandwidth-out: "1"
+    # When this annotation is set，the loadbalancers will only register nodes
+    # with pod running on it, otherwise all nodes will be registered.
+    service.kubernetes.io/local-svc-only-bind-node-with-pod: "true"
+    # Note that the backend talks over HTTP.
+    service.beta.kubernetes.io/aws-load-balancer-backend-protocol: http
+#-----------------------------------------------------
+    # TODO: Fill in with the ARN of your certificate.   
+    #service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:{region}:{user id}:certificate/{id}
+    #
+    # Info: https://aws.amazon.com/premiumsupport/knowledge-center/terminate-https-traffic-eks-acm/
+    service.beta.kubernetes.io/aws-load-balancer-ssl-cert: arn:aws:acm:us-east-1:123456789:certificate/aaaaaaaa-ssss-dddd-ffff-ggggggggg
+#------------------------------------------------------
+    # Only run SSL on the port named "https" below.
+    service.beta.kubernetes.io/aws-load-balancer-ssl-ports: "https"        
+  labels:
+    app: echo-pod
+spec:
+  type: LoadBalancer
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+  - name: https
+    port: 443
+    targetPort: 8080 
+  selector:
+    app: echo-pod
+
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: superdupertest
+  name: echo-deployment
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: echo-pod
+  template:
+    metadata:
+      labels:
+        app: echo-pod
+    spec:
+      containers:
+      - name: echoheaders
+        image: k8s.gcr.io/echoserver:1.10
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080    

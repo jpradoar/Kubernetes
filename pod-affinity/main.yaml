@@ -1,0 +1,177 @@
+#------------------------------------
+#
+# Simple app to test Pod Affinity and Anti Affinity.
+# Required minimum 4 nodes, to allocate the pods in each node different
+#   
+#-----------------------------------
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: myapp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-01
+  namespace: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-01
+  template:
+    metadata:
+      labels:
+        app: app-01
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - app-02
+                - app-03
+                - app-04
+            topologyKey: "kubernetes.io/hostname"      
+#        podAffinity:
+#          preferredDuringSchedulingIgnoredDuringExecution: # <------
+#          - labelSelector:
+#              matchExpressions:
+#              - key: app
+#                operator: NotIn # <------
+#                values:
+#                - app-02
+#                - app-03
+#                - app-04
+#            topologyKey: "kubernetes.io/hostname"              
+      containers:
+      - name: pod-01
+        image: jpradoar/xnginx:v0.1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-02
+  namespace: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-02
+  template:
+    metadata:
+      labels:
+        app: app-02
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - app-01
+                - app-03
+                - app-04
+            topologyKey: "kubernetes.io/hostname"      
+      containers:
+      - name: pod-02
+        image: jpradoar/xnginx:v0.1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80        
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-03
+  namespace: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-03
+  template:
+    metadata:
+      labels:
+        app: app-03
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - app-01
+                - app-02
+                - app-04
+            topologyKey: "kubernetes.io/hostname"      
+      containers:
+      - name: pod-03
+        image: jpradoar/xnginx:v0.1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80 
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deployment-04
+  namespace: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-04
+  template:
+    metadata:
+      labels:
+        app: app-04
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - app-01
+                - app-02
+                - app-03
+            topologyKey: "kubernetes.io/hostname"      
+      containers:
+      - name: pod-04
+        image: jpradoar/xnginx:v0.1
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80               
+
+#---------------------------------------------------------------
+# This config generate that this deployments can scheduled each pod in a different node.
+# You can play wiht labels (app :) to generate your oun affinity or Antiaffinity for your neededs
+#
+# TO PAY ATTENTION:
+# If POD-01 have an Anti-Af with POD-04, AND the POD-04 have Affinity with POD-01,  
+# the POD-04 will be deployed but this pod will remain in "Pending" because affinityes not maches one with other
+#
+#
+# In general you can describe the POD (on pending) and see:
+#
+# Conditions:
+# Type Status
+# PodScheduled False
+#
+# Events:
+# ... didn't match pod affinity rules ....
+

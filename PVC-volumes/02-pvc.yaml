@@ -1,0 +1,29 @@
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: encrypted-gp2
+provisioner: kubernetes.io/aws-ebs # Only for AWS  EBS
+parameters:
+  type: gp2
+  fsType: ext4
+  encrypted: "true" # SUPER IMPORTANT
+
+---
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: demo-pvc
+  namespace: myapp
+  labels:
+      app: demo
+  annotations:
+      prometheus.io/scrape: "true"
+spec:
+  storageClassName: encrypted-gp2 # This is the key to use parameters declarated on "StorageClass" (parameters are: type, fsType and encrypted)
+  accessModes:
+    - ReadWriteOnce # https://kubernetes.io/docs/concepts/storage/persistent-volumes/#access-modes
+  resources:
+    requests:
+      storage: 1Gi
+      

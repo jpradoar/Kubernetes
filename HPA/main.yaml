@@ -1,0 +1,91 @@
+#------------------------------------
+#
+#   Simple app to test HPA
+#
+#-----------------------------------
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: myapp
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-hpa
+  namespace: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: hpa-example
+  template:
+    metadata:
+      labels:
+        app: hpa-example
+    spec:
+      containers:
+      - name: demo-hpa
+        image: k8s.gcr.io/hpa-example
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            memory: "30Mi"
+            cpu: "30m"
+          limits:
+            memory: "100Mi"
+            cpu: "100m" 
+
+---            
+apiVersion: autoscaling/v2beta2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: demo-hpa
+  namespace: myapp
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: demo-hpa
+  minReplicas: 1
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50
+
+---
+#------------------------------------------------
+# Optional to acces via curl -s LoadBalancer
+#------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: myapp
+  name: myapp-demo-hpa
+  annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/path:   "/metrics"
+        service.beta.kubernetes.io/aws-load-balancer-additional-resource-tags: "environment=dev,owner=SRE,job=demo-hpa"
+        service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+        service.beta.kubernetes.io/aws-load-balancer-type: nlb 
+        service.beta.kubernetes.io/aws-load-balancer-connection-idle-timeout: "60"
+        service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "3"
+        service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "10"
+        service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "3"
+        service.kubernetes.io/local-svc-only-bind-node-with-pod: "true"
+  labels:
+    app: hpa-example
+spec:
+  type: LoadBalancer  
+  selector: 
+    app: hpa-example
+  ports:
+  - name: demo-hpa
+    port: 80
+    protocol: TCP

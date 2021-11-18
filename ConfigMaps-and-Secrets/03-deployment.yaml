@@ -1,0 +1,46 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mosquitto
+  labels:
+    app: mosquitto
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mosquitto
+  template:
+    metadata:
+      labels:
+        app: mosquitto
+    spec:
+      containers:
+        - name: mosquitto
+          image: eclipse-mosquitto:1.6.2
+          ports:
+            - containerPort: 1883
+#------------------------------------------------
+          volumeMounts:
+            #-------------------------
+            - name: mosquitto-config        # debe ser el mismo que volumes.name
+              mountPath: /mosquitto/config  # Esto es la carpeta donde voy a dejar mi archivo de configuracion (mosquitto.conf) (si el archivo ya existe, lo pisa)
+            #-------------------------
+            - name: mosquitto-secret
+              mountPath: /mosquitto/secret  # si la carpeta no existe la crea, y mete el archivo dentro.
+              readOnly: true # Me aseguro que el archivo que monto sea ReadOnly
+#------------------------------------------------            
+      volumes:
+        #-------------------------        
+        - name: mosquitto-config
+          configMap:
+            name: mosquitto-config-file       # debe ser el mismo que config-file.yaml > metadata.name
+        #-------------------------
+        - name: mosquitto-secret
+          secret: 
+            secretName: mosquitto-secret-file # debe ser el mismo que secret.yaml > metadata.name
+#------------------------------------------------
+
+
+
+

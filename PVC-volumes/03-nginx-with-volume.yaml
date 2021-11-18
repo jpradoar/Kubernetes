@@ -1,0 +1,29 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-demo-pvc
+  namespace: myapp
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app
+  template:
+    metadata:
+      labels:
+        app: app
+    spec:
+      containers:
+      - name: nginx-demo-pvc
+        image: nginx:stable
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: nginx-www-volume
+      volumes:
+      - name: nginx-www-volume # El mismo que el volumeMounts.name
+        persistentVolumeClaim:
+          claimName: demo-pvc # Este es el nombre (name:)  de PersistentVolumeClaim del archivo 02-pvc.yaml   ;)

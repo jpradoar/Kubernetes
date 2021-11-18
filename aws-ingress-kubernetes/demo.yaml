@@ -1,0 +1,126 @@
+# kubectl apply -f demo.yaml
+# kubectl -n xxx get pod,svc,ingress 
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: xxx
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app1
+  namespace: xxx
+spec:
+  selector:
+    matchLabels:
+      app: app1
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: app1
+    spec:
+      containers:
+      - image: hashicorp/http-echo
+        args:
+          - "-text=app1"
+        imagePullPolicy: Always
+        name: app1
+        ports:
+        - containerPort: 5678
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app2
+  namespace: xxx
+spec:
+  selector:
+    matchLabels:
+      app: app2
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: app2
+    spec:
+      containers:
+      - image: hashicorp/http-echo
+        args:
+          - "-text=app2"
+        imagePullPolicy: Always
+        name: app2
+        ports:
+        - containerPort: 5678
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-1
+  namespace: xxx
+spec:
+  ports:
+    - port: 80
+      targetPort: 5678
+      protocol: TCP
+  type: NodePort  # Para el ingress requiere NodePort
+  selector:
+    app: app1
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: service-2
+  namespace: xxx
+spec:
+  ports:
+    - port: 80
+      targetPort: 5678
+      protocol: TCP
+  type: NodePort # Para el ingress requiere NodePort
+  selector:
+    app: app2
+
+
+# info
+# https://aws.amazon.com/es/blogs/opensource/kubernetes-ingress-aws-alb-ingress-controller/
+# https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.2/guide/ingress/annotations/
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-ingress
+  namespace: xxx
+  annotations:
+    kubernetes.io/ingress.class: alb 
+    alb.ingress.kubernetes.io/load-balancer-name: app-ingress   
+    alb.ingress.kubernetes.io/scheme: internet-facing  # internal | internet-facing
+    alb.ingress.kubernetes.io/tags: Environment=dev,Team=sre
+    #alb.ingress.kubernetes.io/load-balancer-attributes: deletion_protection.enabled=true
+  labels:
+    app: ingress    
+spec:
+  rules:
+    - http:
+        paths:
+        - path: /app1
+          pathType: Prefix
+          backend:
+            service:
+              name: service-1
+              port:
+                number: 80             
+        - path: /app2
+          pathType: Prefix
+          backend:
+            service:
+              name: service-2
+              port:
+                number: 80        
