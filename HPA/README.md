@@ -20,3 +20,8 @@ replicaset.apps/demo-hpa-564d945c78   1         1         1       117s
 NAME                                           REFERENCE             TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
 horizontalpodautoscaler.autoscaling/demo-hpa   Deployment/demo-hpa   3%/50%    1         10        1          116s
 </pre>
+
+
+
+# Test
+	 while sleep 0.01; do wget -q -O- http://xxxxxxxxxxxxxxxxxxx.elb.us-east-99.amazonaws.com; done
