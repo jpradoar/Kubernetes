@@ -5,9 +5,9 @@
 ### Ejemplos reales.
 
 <div align="center"> 
-	<img src="img/error-137.png" /> 
+	<img src="../img/error-137.png" /> 
 	<br>
-	<img src="img/oom-137.png" /> 
+	<img src="../img/oom-137.png" /> 
 </div>
 <br><br>
 
