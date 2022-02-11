@@ -33,5 +33,5 @@ Searching in kubernetes website and I selected the most common issues for create
 <br>
 
 <div align="center"> 
-	<img src="kubectl.png" /> 
+	<img src="img/kubectl.png" /> 
 </div>
