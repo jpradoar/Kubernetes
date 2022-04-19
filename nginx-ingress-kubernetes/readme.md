@@ -1,7 +1,5 @@
 # Nginx Ingress Kubernetes
 
-https://www.youtube.com/watch?v=80Ew_fsV4rM
-
 <pre>
 The idea is use only one load-balancer and a R53 domain to access all resources. 
 This is interesting to avoid spend money in multiple LBs and maintain much more simplicity administration
