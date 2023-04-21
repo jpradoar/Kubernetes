@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: test-x-cm      
+  namespace: default
+  labels:
+    app:  test-x
+data:
+  aaa: variable_aaa 
+  bbb: variable_bbb 
+
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test
+  namespace: default
+  labels:
+    app: test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      name: test-x-pod
+      app: test-x
+  template:
+    metadata:
+      name: test-x-pod
+      labels:
+        name: test-x-pod
+        app: test-x
+    spec:
+      containers:
+        - name: test
+          image: alpine:latest
+          command: ["/bin/sh"]
+          args: ["-c", "sleep infinity"]
+          env:
+            - name: ccc
+              value: variable_ccc        
+          envFrom:
+          - configMapRef:
+              name: test-x-cm      
